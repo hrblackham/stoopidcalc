@@ -3,7 +3,7 @@
 
 ## About
 
-A calculator app built with Go and Wails.
+A pink calculator app built with Go and Wails.
 
 ## Development
 
@@ -17,4 +17,5 @@ wails dev
 Build a production app:
 '''
 wails build
+'''
 '''
