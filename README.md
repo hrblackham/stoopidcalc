@@ -17,4 +17,3 @@ Build a production app:
 ```
 wails build
 ```
-```
