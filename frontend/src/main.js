@@ -2,152 +2,161 @@ import './style.css';
 import './app.css';
 
 // --- State ---
-let currentValue = '0';
-let previousValue = null;
-let operator = null;
-let waitingForOperand = false;
+let expression = '';   // full expression string e.g. "578+5801+5719"
 let justEvaluated = false;
 
 const valueEl = document.getElementById('value');
 const expressionEl = document.getElementById('expression');
 const clearBtn = document.getElementById('clear-btn');
 
+function getLastNumber() {
+    // Split by operators to get the last number being typed
+    const parts = expression.split(/(?<=[0-9.])(?=[+\-×÷])|(?<=[+\-×÷])(?=[0-9.-])/);
+    return parts[parts.length - 1] || '0';
+}
+
 function updateDisplay() {
-    valueEl.textContent = currentValue;
-    const len = currentValue.replace('-', '').replace('.', '').length;
+    const last = expression ? getLastNumber() : '0';
+    const num = parseFloat(last);
+    let display = last || '0';
+
+    // If number is too long, switch to exponential notation
+    if (!isNaN(num) && (Math.abs(num) >= 1e10 || display.replace('-','').replace('.','').length > 10)) {
+        display = parseFloat(num.toPrecision(4)).toExponential(2);
+    }
+
+    valueEl.textContent = display;
+    expressionEl.scrollLeft = expressionEl.scrollWidth;
+
+    const len = display.replace('-', '').replace('.', '').length;
     valueEl.classList.remove('medium', 'small');
     if (len >= 12) valueEl.classList.add('small');
-    else if (len >= 9) valueEl.classList.add('medium');
-}
-
-function setActiveOp(op) {
-    document.querySelectorAll('.btn-operator').forEach(btn => {
-        btn.classList.remove('active-op');
-        if (btn.dataset.op === op) btn.classList.add('active-op');
-    });
-}
-
-function clearActiveOp() {
-    document.querySelectorAll('.btn-operator').forEach(btn => btn.classList.remove('active-op'));
+    else if (len >= 7) valueEl.classList.add('medium');
 }
 
 function handleNumber(digit) {
-    if (waitingForOperand) {
-        currentValue = digit;
-        waitingForOperand = false;
-    } else if (justEvaluated) {
-        currentValue = digit;
+    if (justEvaluated) {
+        expression = digit;
         justEvaluated = false;
-        expressionEl.textContent = '';
     } else {
-        currentValue = currentValue === '0' ? digit : currentValue + digit;
+        if (expression === '0') expression = digit;
+        else expression += digit;
     }
     clearBtn.textContent = 'C';
+    expressionEl.textContent = expression;
     updateDisplay();
 }
 
 function handleDecimal() {
-    if (waitingForOperand) {
-        currentValue = '0.';
-        waitingForOperand = false;
-    } else if (!currentValue.includes('.')) {
-        currentValue += '.';
+    if (justEvaluated) {
+        expression = '0.';
+        justEvaluated = false;
+    } else {
+        // Only add decimal if last number doesn't already have one
+        const parts = expression.split(/[+\-×÷]/);
+        const last = parts[parts.length - 1];
+        if (!last.includes('.')) expression += '.';
     }
+    expressionEl.textContent = expression;
     updateDisplay();
-}
-
-function compute(a, op, b) {
-    const x = parseFloat(a);
-    const y = parseFloat(b);
-    switch (op) {
-        case '+': return x + y;
-        case '−': return x - y;
-        case '×': return x * y;
-        case '÷': return y === 0 ? null : x / y;
-        default: return y;
-    }
-}
-
-function formatResult(num) {
-    if (num === null) return 'Error';
-    // Avoid floating point display issues
-    const str = parseFloat(num.toPrecision(12)).toString();
-    return str;
 }
 
 function handleOperator(op) {
-    if (operator && !waitingForOperand) {
-        // Chain: compute with existing op
-        const result = compute(previousValue, operator, currentValue);
-        expressionEl.textContent = `${previousValue} ${operator} ${currentValue} ${op}`;
-        currentValue = formatResult(result);
-        if (currentValue === 'Error') {
-            operator = null;
-            previousValue = null;
-            waitingForOperand = false;
-            clearActiveOp();
-            updateDisplay();
-            return;
-        }
-    } else {
-        expressionEl.textContent = `${currentValue} ${op}`;
+    if (justEvaluated) justEvaluated = false;
+
+    // Replace trailing operator if user changes their mind
+    const lastChar = expression.slice(-1);
+    if (['+', '−', '×', '÷'].includes(lastChar)) {
+        expression = expression.slice(0, -1) + op;
+    } else if (expression !== '') {
+        expression += op;
     }
-    previousValue = currentValue;
-    operator = op;
-    waitingForOperand = true;
-    justEvaluated = false;
-    setActiveOp(op);
+
+    expressionEl.textContent = expression;
     updateDisplay();
+}
+
+function evaluate(expr) {
+    const jsExpr = expr
+        .replace(/×/g, '*')
+        .replace(/÷/g, '/')
+        .replace(/−/g, '-');
+    try {
+        const result = Function('"use strict"; return (' + jsExpr + ')')();
+        if (!isFinite(result)) return 'Error';
+        const num = parseFloat(result.toPrecision(12));
+        // If number is too long, use exponential notation
+        if (Math.abs(num) >= 1e10 || (Math.abs(num) < 1e-6 && num !== 0)) {
+            return num.toExponential(3);
+        }
+        return num.toString();
+    } catch {
+        return 'Error';
+    }
 }
 
 function handleEquals() {
-    if (!operator || previousValue === null) return;
-    const b = waitingForOperand ? previousValue : currentValue;
-    const result = compute(previousValue, operator, b);
-    expressionEl.textContent = `${previousValue} ${operator} ${b} =`;
-    currentValue = formatResult(result);
-    operator = null;
-    previousValue = null;
-    waitingForOperand = false;
+    if (!expression || justEvaluated) return;
+
+    // Remove trailing operator before evaluating
+    const cleaned = expression.replace(/[+\-×÷]$/, '');
+    if (!cleaned) return;
+
+    const result = evaluate(cleaned);
+    expressionEl.textContent = cleaned + ' =';
+    expressionEl.scrollLeft = 0; // reset scroll to show full expression
+    valueEl.textContent = result;
+    valueEl.classList.remove('medium', 'small');
+    const len = result.replace('-', '').replace('.', '').length;
+    if (len >= 12) valueEl.classList.add('small');
+    else if (len >= 9) valueEl.classList.add('medium');
+
+    expression = result;
     justEvaluated = true;
-    clearActiveOp();
+    clearBtn.textContent = 'AC';
+}
+
+// Backspace — deletes one character
+function handleClear() {
+    if (expression.length > 1) {
+        expression = expression.slice(0, -1);
+    } else {
+        expression = '';
+    }
+    justEvaluated = false;
+    expressionEl.textContent = expression;
     updateDisplay();
 }
 
-function handleClear() {
-    if (clearBtn.textContent === 'C') {
-        currentValue = '0';
-        clearBtn.textContent = 'AC';
-    } else {
-        currentValue = '0';
-        previousValue = null;
-        operator = null;
-        waitingForOperand = false;
-        justEvaluated = false;
-        expressionEl.textContent = '';
-        clearActiveOp();
-    }
+// AC — resets everything
+function handleClearAll() {
+    expression = '';
+    justEvaluated = false;
+    expressionEl.textContent = '';
     updateDisplay();
 }
 
 function handleSign() {
-    if (currentValue === '0' || currentValue === 'Error') return;
-    currentValue = currentValue.startsWith('-')
-        ? currentValue.slice(1)
-        : '-' + currentValue;
-    updateDisplay();
+    if (!expression || expression === '0') return;
+    // Negate the last number in the expression
+    const match = expression.match(/^(.*[+×÷]|^)(−?\d*\.?\d+)$/);
+    if (match) {
+        const prefix = match[1];
+        const num = match[2];
+        expression = prefix + (num.startsWith('−') ? num.slice(1) : '−' + num);
+        expressionEl.textContent = expression;
+        updateDisplay();
+    }
 }
 
 function handlePercent() {
-    const val = parseFloat(currentValue);
-    if (isNaN(val)) return;
-    if (operator && previousValue !== null) {
-        // iOS-style: relative percent (e.g. 200 + 50% => 200 + 100)
-        const base = parseFloat(previousValue);
-        currentValue = formatResult((base * val) / 100);
-    } else {
-        currentValue = formatResult(val / 100);
-    }
+    const match = expression.match(/^(.*[+\-×÷])?(\d*\.?\d+)$/);
+    if (!match) return;
+    const prefix = match[1] || '';
+    const num = parseFloat(match[2]);
+    const result = parseFloat((num / 100).toPrecision(12)).toString();
+    expression = prefix + result;
+    expressionEl.textContent = expression;
     updateDisplay();
 }
 
@@ -164,6 +173,7 @@ document.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
         switch (btn.dataset.action) {
             case 'clear':   handleClear();   break;
+            case 'clearall': handleClearAll(); break;
             case 'sign':    handleSign();    break;
             case 'percent': handlePercent(); break;
             case 'decimal': handleDecimal(); break;
@@ -182,16 +192,10 @@ document.addEventListener('keydown', e => {
     else if (e.key === '/') { e.preventDefault(); handleOperator('÷'); }
     else if (e.key === 'Enter' || e.key === '=') handleEquals();
     else if (e.key === 'Escape') handleClear();
-    else if (e.key === 'Backspace') {
-        if (currentValue.length > 1 && currentValue !== 'Error') {
-            currentValue = currentValue.slice(0, -1) || '0';
-            updateDisplay();
-        } else {
-            handleClear();
-        }
-    }
+    else if (e.key === 'Backspace') handleClear();
     else if (e.key === '%') handlePercent();
 });
 
 // Initial render
+expressionEl.textContent = '';
 updateDisplay();

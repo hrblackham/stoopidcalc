@@ -3,108 +3,87 @@
     flex-direction: column;
     width: 360px;
     user-select: none;
+    font-family: 'Space Mono', Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
 }
-
-/* Display */
 .display {
     padding: 0 24px 16px;
     text-align: right;
 }
-
 .expression {
-    font-size: 18px;
-    color: #c080a0;
+    font-size: 24px;
+    color: #c7136d;
     min-height: 24px;
     margin-bottom: 4px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .value {
-    font-size: 72px;
-    font-weight: 200;
-    color: #ffffff;
+    font-size: 80px;
+    font-weight: 400;
+    color: #621726;
     line-height: 1;
-    overflow: hidden;
+    overflow: visible;
     text-overflow: ellipsis;
     white-space: nowrap;
     transition: font-size 0.1s ease;
 }
-
-.value.medium {
-    font-size: 52px;
-}
-
-.value.small {
-    font-size: 36px;
-}
-
-/* Button grid */
+.value.medium { font-size: 65px; }
+.value.small  { font-size: 40px; }
 .buttons {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-    padding: 0 12px;
+    gap: 14px;
+    padding: 1 12px;
 }
-
-/* Base button */
 .btn {
     width: 80px;
     height: 80px;
-    border-radius: 50%;
+    border-radius: 999px;
     border: none;
-    font-size: 28px;
-    font-weight: 400;
+    font-size: 45px;
+    font-weight: 500;
+    font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: filter 0.1s ease, transform 0.05s ease;
+    transition: filter 0.1s ease, transform 0.08s ease, box-shadow 0.1s ease;
     -webkit-app-region: no-drag;
+    box-shadow: 0 4px 14px rgba(180, 80, 80, 0.15);
 }
-
 .btn:hover {
-    filter: brightness(1.2);
+    filter: brightness(1.1);
 }
-
 .btn:active {
-    transform: scale(0.94);
-    filter: brightness(0.85);
+    transform: scale(0.92);
+    filter: brightness(0.88);
 }
-
-/* Zero button pill */
 .btn-zero {
     grid-column: span 2;
     width: 100%;
-    border-radius: 40px;
+    border-radius: 999px;
     justify-content: flex-start;
     padding-left: 28px;
 }
-
-/* Color variants */
+/* Light dusty pink — number buttons */
 .btn-number {
-    background-color: #d0627e;
-    color: #ffffff;
+    background-color: #f6a5bcf3;
+    color: #f51e89;
 }
-
-.btn-number:hover {
-    background-color: #e07d97;
-}
-
+/* Soft pale pink — function buttons (AC, +/-, %) */
 .btn-function {
-    background-color: #e8a0c0;
-    color: #2d0a1a;
-    font-size: 24px;
+    background-color: #fccdea;
+    color: #f47fa2;
+    font-size: 35px;
 }
-
+/* Hot bright pink — operators */
 .btn-operator {
-    background-color: #ff2d7a;
+    background-color: #f98cb4f8;
     color: #ffffff;
 }
-
-/* Active (selected) operator */
 .btn-operator.active-op {
     background-color: #ffffff;
     color: #ff2d7a;
+    box-shadow: 0 0 0 3px #ff2d7a;
 }
